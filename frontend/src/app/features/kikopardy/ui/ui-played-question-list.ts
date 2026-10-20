@@ -22,7 +22,9 @@ interface PlayedRow {
       <ol class="flex flex-col gap-3">
         @for (row of rows(); track row.id) {
           <li class="rounded-xl border border-stage-700 bg-stage-950/50 p-4">
-            <p class="text-sm font-semibold tracking-wide text-gold-300 uppercase">
+            <p
+              class="text-sm font-semibold tracking-wide text-gold-300 uppercase [overflow-wrap:anywhere]"
+            >
               {{ row.categoryName }} · {{ row.value }}
               @if (row.double) {
                 · Secret Double 2×

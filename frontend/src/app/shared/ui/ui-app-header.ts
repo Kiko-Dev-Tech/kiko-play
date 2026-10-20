@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, input, output } from '@angular/core';
 import { RouterLink } from '@angular/router';
 
 @Component({
@@ -10,20 +10,34 @@ import { RouterLink } from '@angular/router';
         <a routerLink="/games" class="font-display text-xl tracking-wider text-gold-400 uppercase">
           Kiko<span class="text-slate-100">Play</span>
         </a>
-        @if (username()) {
-          <a
-            routerLink="/"
-            [queryParams]="{ change: 1 }"
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
             class="rounded-lg px-2 py-1 text-sm text-slate-300 hover:bg-stage-800 hover:text-white"
+            title="Sound check"
+            (click)="soundCheck.emit()"
           >
-            Playing as <strong class="text-white">{{ username() }}</strong>
-            <span class="sr-only">, change name</span>
-          </a>
-        }
+            <span aria-hidden="true">{{ volume() === 0 ? '🔇' : '🔊' }}</span>
+            {{ volume() }}%
+            <span class="sr-only">video volume, open sound check</span>
+          </button>
+          @if (username()) {
+            <a
+              routerLink="/"
+              [queryParams]="{ change: 1 }"
+              class="rounded-lg px-2 py-1 text-sm text-slate-300 hover:bg-stage-800 hover:text-white"
+            >
+              Playing as <strong class="text-white">{{ username() }}</strong>
+              <span class="sr-only">, change name</span>
+            </a>
+          }
+        </div>
       </div>
     </header>
   `,
 })
 export class UiAppHeader {
   readonly username = input('');
+  readonly volume = input(0);
+  readonly soundCheck = output();
 }

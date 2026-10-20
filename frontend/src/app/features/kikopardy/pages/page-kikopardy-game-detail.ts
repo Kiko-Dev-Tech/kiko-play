@@ -22,7 +22,9 @@ import { UiScoreboard } from '../ui/ui-scoreboard';
         backLink="/kikopardy/history"
         backLabel="Game history"
       />
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+      <div
+        class="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]"
+      >
         <section aria-labelledby="played-heading">
           <h2 id="played-heading" class="mb-3 text-lg font-bold text-gold-300">Played questions</h2>
           <ui-played-question-list [game]="game" />

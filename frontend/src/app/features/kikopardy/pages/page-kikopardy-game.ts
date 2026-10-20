@@ -1,6 +1,9 @@
 import { Component, effect, inject, input, untracked } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { SoundCheckService } from '../../../core/sound-check.service';
+import { VolumeService } from '../../../core/volume.service';
 import { UiErrorMessage } from '../../../shared/ui/ui-error-message';
+import { UiSoundCheckHint } from '../../../shared/ui/ui-sound-check-hint';
 import { GameSocketService } from '../services/game-socket.service';
 import { KikopardyGameService, type GameRole } from '../services/kikopardy-game.service';
 import { UiBoardGrid } from '../ui/ui-board-grid';
@@ -28,6 +31,7 @@ import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
     UiScoreboard,
     UiHostControls,
     UiGameEnded,
+    UiSoundCheckHint,
   ],
   providers: [GameSocketService, KikopardyGameService],
   template: `
@@ -50,7 +54,9 @@ import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
     @if (game.ended()) {
       <ui-game-ended [players]="game.state()?.players ?? []" />
     } @else if (game.state(); as state) {
-      <div class="grid gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]">
+      <div
+        class="grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,2fr)_minmax(18rem,1fr)]"
+      >
         <div class="flex flex-col gap-6">
           @if (state.current; as current) {
             <ui-question-view [current]="current" [showHiddenAnswerMedia]="game.isHost()" />
@@ -78,6 +84,9 @@ import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
         </div>
 
         <aside class="flex flex-col gap-6">
+          @if (!game.isHost() && !state.current) {
+            <ui-sound-check-hint [volume]="volumes.volume()" (soundCheck)="soundCheck.open()" />
+          }
           @if (!game.isHost() && state.current; as current) {
             @if (game.isGuessQuestion()) {
               <ui-guess-form
@@ -131,6 +140,8 @@ export class PageKikopardyGame {
   readonly role = input.required<GameRole>();
 
   protected readonly game = inject(KikopardyGameService);
+  protected readonly volumes = inject(VolumeService);
+  protected readonly soundCheck = inject(SoundCheckService);
 
   constructor() {
     // (Re)connect whenever the code or role in the URL changes.

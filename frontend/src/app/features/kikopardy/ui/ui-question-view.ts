@@ -27,7 +27,9 @@ import { UiMediaEmbed } from './ui-media-embed';
           </span>
         </div>
       }
-      <p class="text-sm font-semibold tracking-widest text-gold-300 uppercase">
+      <p
+        class="text-sm font-semibold tracking-widest text-gold-300 uppercase [overflow-wrap:anywhere]"
+      >
         {{ current().question.categoryName }} · {{ current().question.points }}
       </p>
       @if (current().question.question === undefined) {

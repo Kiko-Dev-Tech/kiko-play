@@ -10,7 +10,6 @@ import {
 } from '@angular/core';
 import { VolumeService } from '../../core/volume.service';
 import { YoutubeApiService } from '../../core/youtube-api.service';
-import { UiVolumeSlider } from './ui-volume-slider';
 
 export interface PlayerClip {
   videoId: string;
@@ -19,12 +18,12 @@ export interface PlayerClip {
 }
 
 /**
- * A YouTube player with a volume slider. The volume is set before playback starts,
- * so autoplay never starts at full volume. The player is only recreated when the clip changes.
+ * A YouTube player that plays at the global volume (see the Sound check in the header).
+ * The volume is set before playback starts, so autoplay never starts at full volume.
+ * The player is only recreated when the clip changes.
  */
 @Component({
   selector: 'ui-youtube-player',
-  imports: [UiVolumeSlider],
   template: `
     <div class="aspect-video w-full overflow-hidden rounded-xl bg-black">
       <div #host class="h-full w-full" [attr.aria-label]="label()"></div>
@@ -32,11 +31,6 @@ export interface PlayerClip {
     @if (error(); as message) {
       <p class="mt-2 text-sm text-rose-300" role="alert">{{ message }}</p>
     }
-    <ui-volume-slider
-      class="mt-2 block"
-      [volume]="volumes.volume()"
-      (changed)="volumes.setVolume($event)"
-    />
   `,
 })
 export class UiYoutubePlayer {
@@ -44,7 +38,7 @@ export class UiYoutubePlayer {
   readonly autoplay = input(false);
   readonly label = input('Video');
 
-  protected readonly volumes = inject(VolumeService);
+  private readonly volumes = inject(VolumeService);
   protected readonly error = signal<string | null>(null);
   private readonly api = inject(YoutubeApiService);
   private readonly host = viewChild.required<ElementRef<HTMLElement>>('host');

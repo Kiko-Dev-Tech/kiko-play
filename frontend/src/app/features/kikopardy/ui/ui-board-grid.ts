@@ -6,7 +6,11 @@ import type { BoardCellView, GameView } from '../kikopardy.contract';
   selector: 'ui-board-grid',
   template: `
     <div class="overflow-x-auto">
-      <table class="w-full min-w-[36rem] table-fixed border-separate border-spacing-2">
+      <!-- Every column keeps a readable width; on small screens the board scrolls sideways. -->
+      <table
+        class="w-full table-fixed border-separate border-spacing-2"
+        [style.min-width.rem]="categories().length * 7"
+      >
         <caption class="sr-only">
           Game board
         </caption>
@@ -15,7 +19,8 @@ import type { BoardCellView, GameView } from '../kikopardy.contract';
             @for (category of categories(); track category.id) {
               <th
                 scope="col"
-                class="rounded-lg bg-stage-700 px-2 py-3 font-display text-sm tracking-wide text-white uppercase sm:text-base"
+                class="rounded-lg bg-stage-700 px-1.5 py-3 align-middle text-xs leading-tight font-extrabold text-white uppercase sm:tracking-wide hyphens-auto [overflow-wrap:anywhere] xl:text-sm"
+                [attr.title]="category.name"
               >
                 {{ category.name }}
               </th>
