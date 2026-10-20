@@ -2,6 +2,7 @@ import { Service, computed, inject, signal } from '@angular/core';
 import { httpErrorMessage } from '../../../core/http-error';
 import type { BoardInput, Category, Question } from '../kikopardy.contract';
 import { BoardApiService } from './board-api.service';
+import { uuid } from '../../../core/uuid';
 
 const DEFAULT_VALUES = [100, 200, 300, 400, 500];
 
@@ -137,7 +138,7 @@ export class BoardEditorService {
 
 function createCategory(index: number): Category {
   return {
-    id: crypto.randomUUID(),
+    id: uuid(),
     name: `Category ${index}`,
     questions: DEFAULT_VALUES.map(createQuestion),
   };
@@ -145,7 +146,7 @@ function createCategory(index: number): Category {
 
 function createQuestion(value: number): Question {
   return {
-    id: crypto.randomUUID(),
+    id: uuid(),
     value,
     question: '',
     answer: '',

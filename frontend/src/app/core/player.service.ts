@@ -1,5 +1,6 @@
 import { Service, computed, signal } from '@angular/core';
 import { browserStorage } from './browser-storage';
+import { uuid } from './uuid';
 
 const NAME_KEY = 'kiko.username';
 const ID_KEY = 'kiko.playerId';
@@ -24,7 +25,7 @@ export class PlayerService {
     if (existing) {
       return existing;
     }
-    const id = crypto.randomUUID();
+    const id = uuid();
     browserStorage.set(ID_KEY, id);
     return id;
   }
