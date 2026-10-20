@@ -19,6 +19,8 @@ export interface Question {
   /** Missing on boards saved before guess questions existed, which means `buzzer`. */
   type?: QuestionType;
   value: number;
+  /** Secret Double: worth twice the points. Players only learn it when the question is picked. */
+  double?: boolean;
   question: string;
   answer: string;
   questionMedia?: Media | null;
@@ -85,6 +87,9 @@ export interface PlayedQuestion {
  */
 export interface QuestionView extends Pick<Question, 'id' | 'value'> {
   type: QuestionType;
+  double: boolean;
+  /** What a correct answer is worth: the value, doubled for a Secret Double. */
+  points: number;
   categoryName: string;
   question?: string;
   questionMedia?: Media | null;
@@ -113,6 +118,8 @@ export interface BoardCellView {
   id: string;
   value: number;
   played: boolean;
+  /** Only sent to the host, so players can't spot the Secret Doubles on the board. */
+  double?: boolean;
 }
 
 export interface GameView {

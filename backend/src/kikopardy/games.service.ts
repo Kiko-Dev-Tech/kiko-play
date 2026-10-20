@@ -105,7 +105,7 @@ export class GamesService {
 
   async get(id: string): Promise<GameDetail> {
     const game = await this.findEntity(id);
-    // This route is public, so answers of a game that is still running stay hidden.
+    // This route is public, so answers and Secret Doubles of a game that is still running stay hidden.
     const board: BoardInput =
       game.status === 'finished'
         ? game.board
@@ -117,6 +117,7 @@ export class GamesService {
                 ...q,
                 answer: '',
                 answerMedia: null,
+                double: false,
               })),
             })),
           };

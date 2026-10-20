@@ -5,6 +5,7 @@ interface PlayedRow {
   id: string;
   categoryName: string;
   value: number;
+  double: boolean;
   question: string;
   answer: string;
   results: { name: string; correct: boolean; delta: number }[];
@@ -23,6 +24,9 @@ interface PlayedRow {
           <li class="rounded-xl border border-stage-700 bg-stage-950/50 p-4">
             <p class="text-sm font-semibold tracking-wide text-gold-300 uppercase">
               {{ row.categoryName }} · {{ row.value }}
+              @if (row.double) {
+                · Secret Double 2×
+              }
             </p>
             <p class="mt-1 text-white">{{ row.question }}</p>
             <p class="mt-1 text-slate-300">
@@ -78,6 +82,7 @@ export class UiPlayedQuestionList {
           id: q.id,
           categoryName: category.name,
           value: q.value,
+          double: q.double === true,
           question: q.question,
           answer: q.answer,
           results: (played.get(q.id)?.results ?? []).map((r) => ({

@@ -66,22 +66,22 @@ function startFromUrl(url: string): number | undefined {
   }
 }
 
-/** The privacy-friendly embed URL. Only built from a validated video ID. */
-export function youtubeEmbedUrl(
-  url: string,
-  options: { start?: number; end?: number; autoplay: boolean },
-): string | null {
-  const id = youtubeVideoId(url);
-  if (!id) {
+export interface YoutubeClip {
+  videoId: string;
+  start?: number;
+  end?: number;
+}
+
+/** The video and the part of it to play. Without an explicit start, a `?t=` in the link is used. */
+export function youtubeClip(url: string, start?: number, end?: number): YoutubeClip | null {
+  const videoId = youtubeVideoId(url);
+  if (!videoId) {
     return null;
   }
-  const params = new URLSearchParams({ rel: '0', autoplay: options.autoplay ? '1' : '0' });
-  const start = options.start ?? startFromUrl(url);
-  if (start !== undefined) {
-    params.set('start', String(start));
-  }
-  if (options.end !== undefined) {
-    params.set('end', String(options.end));
-  }
-  return `https://www.youtube-nocookie.com/embed/${id}?${params}`;
+  const clipStart = start ?? startFromUrl(url);
+  return {
+    videoId,
+    ...(clipStart !== undefined ? { start: clipStart } : {}),
+    ...(end !== undefined ? { end } : {}),
+  };
 }

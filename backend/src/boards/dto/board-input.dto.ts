@@ -1,6 +1,7 @@
 import { Type } from 'class-transformer';
 import {
   IsArray,
+  IsBoolean,
   IsIn,
   IsInt,
   IsNotEmpty,
@@ -48,6 +49,10 @@ export class QuestionDto implements Question {
 
   @IsInt()
   value: number;
+
+  @IsOptional()
+  @IsBoolean()
+  double?: boolean;
 
   @IsString()
   @MaxLength(2000)

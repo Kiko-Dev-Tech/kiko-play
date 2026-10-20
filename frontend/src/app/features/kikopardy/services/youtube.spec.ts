@@ -1,4 +1,4 @@
-import { formatTime, parseTime, youtubeEmbedUrl, youtubeVideoId } from './youtube';
+import { formatTime, parseTime, youtubeClip, youtubeVideoId } from './youtube';
 
 describe('youtube', () => {
   it.each([
@@ -20,16 +20,23 @@ describe('youtube', () => {
     },
   );
 
-  it('builds an embed URL with start and end', () => {
-    expect(
-      youtubeEmbedUrl('https://youtu.be/dQw4w9WgXcQ', { start: 43, end: 50, autoplay: true }),
-    ).toBe('https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?rel=0&autoplay=1&start=43&end=50');
+  it('builds a clip with start and end', () => {
+    expect(youtubeClip('https://youtu.be/dQw4w9WgXcQ', 43, 50)).toEqual({
+      videoId: 'dQw4w9WgXcQ',
+      start: 43,
+      end: 50,
+    });
   });
 
   it('takes the start time from the link when none is set', () => {
-    expect(youtubeEmbedUrl('https://youtu.be/dQw4w9WgXcQ?t=1m30s', { autoplay: false })).toContain(
-      'start=90',
-    );
+    expect(youtubeClip('https://youtu.be/dQw4w9WgXcQ?t=1m30s')).toEqual({
+      videoId: 'dQw4w9WgXcQ',
+      start: 90,
+    });
+  });
+
+  it('returns no clip for invalid links', () => {
+    expect(youtubeClip('https://vimeo.com/123')).toBeNull();
   });
 
   it('parses and formats times', () => {

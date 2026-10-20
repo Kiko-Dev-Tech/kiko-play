@@ -197,7 +197,7 @@ export class GameRoom {
     if (!player) {
       throw new GameError('Nobody has buzzed');
     }
-    const delta = correct ? current.question.value : -current.question.value;
+    const delta = correct ? points(current) : -points(current);
     player.score += delta;
     current.results.push({ playerId: player.id, correct, delta });
     current.buzzedPlayerId = null;
@@ -237,12 +237,8 @@ export class GameRoom {
     if (current.guessWinnerId) {
       throw new GameError('The points have already been given');
     }
-    player.score += current.question.value;
-    current.results.push({
-      playerId,
-      correct: true,
-      delta: current.question.value,
-    });
+    player.score += points(current);
+    current.results.push({ playerId, correct: true, delta: points(current) });
     current.guessWinnerId = playerId;
     this.closeCurrent();
   }
@@ -326,6 +322,7 @@ export class GameRoom {
           id: q.id,
           value: q.value,
           played: this.played.has(q.id),
+          ...(forAdmin && q.double ? { double: true } : {}),
         })),
       })),
       players: [...this.players.values()].map((p) => ({ ...p })),
@@ -364,6 +361,9 @@ export class GameRoom {
       question: {
         id,
         type: current.question.type ?? 'buzzer',
+        // Revealed to everyone as soon as the question is picked.
+        double: current.question.double === true,
+        points: points(current),
         value,
         categoryName: current.categoryName,
         ...(showQuestion ? { question, questionMedia } : {}),
@@ -411,6 +411,13 @@ export class GameRoom {
       throw new GameError('This game has ended');
     }
   }
+}
+
+/** A Secret Double is worth twice its value, for right and wrong answers. */
+function points(current: CurrentQuestion): number {
+  return current.question.double
+    ? current.question.value * 2
+    : current.question.value;
 }
 
 function isGuess(current: CurrentQuestion): boolean {

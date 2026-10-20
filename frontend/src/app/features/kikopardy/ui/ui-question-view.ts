@@ -14,8 +14,21 @@ import { UiMediaEmbed } from './ui-media-embed';
       class="flex flex-col gap-5 rounded-2xl border-2 border-stage-600 bg-gradient-to-b from-stage-700 to-stage-900 p-6 text-center shadow-xl sm:p-10"
       aria-live="polite"
     >
+      @if (current().question.double) {
+        <div
+          class="mx-auto flex flex-col items-center gap-1 rounded-2xl border-2 border-gold-300 bg-gold-400 px-6 py-3 text-stage-950 shadow-lg shadow-gold-400/30"
+          role="status"
+        >
+          <span class="font-display text-2xl tracking-wider uppercase sm:text-3xl"
+            >Secret Double!</span
+          >
+          <span class="text-sm font-semibold">
+            {{ current().question.value }} × 2 = {{ current().question.points }} points
+          </span>
+        </div>
+      }
       <p class="text-sm font-semibold tracking-widest text-gold-300 uppercase">
-        {{ current().question.categoryName }} · {{ current().question.value }}
+        {{ current().question.categoryName }} · {{ current().question.points }}
       </p>
       @if (current().question.question === undefined) {
         <div class="flex flex-col items-center gap-3 py-8">

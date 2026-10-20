@@ -15,6 +15,13 @@ function createRoom(overrides: Partial<GameSnapshot> = {}): GameRoom {
             { id: 'q1', value: 100, question: 'Q1?', answer: 'A1' },
             { id: 'q2', value: 200, question: 'Q2?', answer: 'A2' },
             {
+              id: 'd1',
+              value: 400,
+              double: true,
+              question: 'D?',
+              answer: 'DA',
+            },
+            {
               id: 'g1',
               type: 'guess',
               value: 300,
@@ -264,6 +271,75 @@ describe('GameRoom', () => {
     it('does not allow buzzing', () => {
       expect(() => room.setBuzzersOpen(true)).toThrow(GameError);
       expect(() => room.buzz('p1')).toThrow(GameError);
+    });
+  });
+  describe('Secret Doubles', () => {
+    it('hides the double from players on the board but shows it to the host', () => {
+      const playerCell = room
+        .view(false)
+        .categories[0].cells.find((c) => c.id === 'd1');
+      const hostCell = room
+        .view(true)
+        .categories[0].cells.find((c) => c.id === 'd1');
+      expect(playerCell).toEqual({ id: 'd1', value: 400, played: false });
+      expect(hostCell?.double).toBe(true);
+    });
+
+    it('reveals the double as soon as the question is picked', () => {
+      room.selectQuestion('d1');
+      expect(room.view(false).current?.question).toMatchObject({
+        double: true,
+        points: 800,
+      });
+      expect(room.view(false).current?.question.question).toBeUndefined();
+    });
+
+    it('doubles points for right and wrong answers', () => {
+      room.selectQuestion('d1');
+      room.setBuzzersOpen(true);
+      room.buzz('p1');
+      room.judge(false);
+      room.buzz('p2');
+      room.judge(true);
+      expect(scores(room)).toEqual({ Anna: -800, Ben: 800, Cleo: 0 });
+    });
+
+    it('doubles the points of a guess question', () => {
+      const guessRoom = createRoom({
+        board: {
+          name: 'Guess',
+          categories: [
+            {
+              id: 'c1',
+              name: 'Numbers',
+              questions: [
+                {
+                  id: 'g',
+                  type: 'guess',
+                  double: true,
+                  value: 300,
+                  question: '?',
+                  answer: '!',
+                },
+              ],
+            },
+          ],
+        },
+      });
+      guessRoom.join('p1', 'Anna');
+      guessRoom.selectQuestion('g');
+      guessRoom.setGuessingOpen(true);
+      guessRoom.guess('p1', '42');
+      guessRoom.awardGuess('p1');
+      expect(scores(guessRoom)).toEqual({ Anna: 600 });
+    });
+
+    it('counts a normal question once', () => {
+      room.selectQuestion('q1');
+      expect(room.view(false).current?.question).toMatchObject({
+        double: false,
+        points: 100,
+      });
     });
   });
 });

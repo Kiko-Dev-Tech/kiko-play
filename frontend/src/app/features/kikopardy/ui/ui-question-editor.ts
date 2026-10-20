@@ -29,6 +29,13 @@ import { UiMediaEditor } from './ui-media-editor';
               >Guess</span
             >
           }
+          @if (question().double) {
+            <span
+              class="rounded bg-gold-400 px-1.5 text-xs font-bold text-stage-950"
+              title="Secret Double"
+              >2×</span
+            >
+          }
           @if (question().questionMedia || question().answerMedia) {
             <span class="text-xs text-slate-300" title="Has media">🎬</span>
           }
@@ -84,6 +91,15 @@ import { UiMediaEditor } from './ui-media-editor';
               [value]="question().value"
               (change)="patch({ value: toInt($any($event.target).value) })"
             />
+          </label>
+          <label class="flex items-center gap-2 text-sm font-medium text-slate-300">
+            <input
+              type="checkbox"
+              class="size-4 accent-gold-400"
+              [checked]="question().double === true"
+              (change)="patch({ double: $any($event.target).checked })"
+            />
+            Secret Double: 2× points. Players find out when the question is picked.
           </label>
           <label class="label">
             Question

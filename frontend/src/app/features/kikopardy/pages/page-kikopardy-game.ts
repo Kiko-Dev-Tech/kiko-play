@@ -58,7 +58,7 @@ import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
               <ui-guess-list
                 [guesses]="current.guesses"
                 [players]="state.players"
-                [value]="current.question.value"
+                [value]="current.question.points"
                 [winnerId]="current.guessWinnerId"
                 [canAward]="game.isHost() && !current.guessWinnerId"
                 (awarded)="game.awardGuess($event)"
@@ -110,7 +110,7 @@ import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
             [myId]="game.isHost() ? undefined : game.playerId"
             [buzzedPlayerId]="state.current?.buzzedPlayerId ?? null"
             [editable]="game.isHost()"
-            [step]="state.current?.question?.value ?? 100"
+            [step]="state.current?.question?.points ?? 100"
             (scoreChanged)="setScore($event)"
           />
         </aside>

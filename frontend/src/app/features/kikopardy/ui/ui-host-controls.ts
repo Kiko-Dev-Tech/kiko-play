@@ -53,14 +53,14 @@ export type HostAction =
               class="btn btn-success py-3 text-lg"
               (click)="action.emit('correct')"
             >
-              ✓ Correct +{{ current().question.value }}
+              ✓ Correct +{{ current().question.points }}
             </button>
             <button
               type="button"
               class="btn btn-danger py-3 text-lg"
               (click)="action.emit('wrong')"
             >
-              ✕ Wrong −{{ current().question.value }}
+              ✕ Wrong −{{ current().question.points }}
             </button>
           </div>
         </div>

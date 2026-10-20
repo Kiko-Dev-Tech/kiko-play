@@ -35,12 +35,23 @@ import type { BoardCellView, GameView } from '../kikopardy.contract';
                           class="h-full w-full rounded-lg font-display text-xl transition sm:text-3xl"
                           [class]="cellClass(cell)"
                           [attr.aria-label]="
-                            cell.value + ' points' + (cell.played ? ', played' : '')
+                            cell.value +
+                            ' points' +
+                            (cell.double ? ', Secret Double' : '') +
+                            (cell.played ? ', played' : '')
                           "
                           (click)="selected.emit(cell.id)"
                         >
                           {{ cell.played ? '' : cell.value }}
                         </button>
+                        @if (cell.double) {
+                          <span
+                            class="pointer-events-none absolute top-1 left-1 rounded bg-gold-400 px-1.5 text-xs font-bold text-stage-950"
+                            title="Secret Double (only you see this)"
+                            aria-hidden="true"
+                            >2×</span
+                          >
+                        }
                         @if (cell.played) {
                           <button
                             type="button"
