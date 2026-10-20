@@ -13,6 +13,20 @@ docker compose up --build
 Open http://localhost:8080 (or the `APP_PORT` you set). Postgres data is stored in the `db-data` volume.
 The database schema is created by migrations on backend start.
 
+## Container images
+
+`.github/workflows/docker-images.yml` runs the tests and then builds both images:
+
+| Event              | Result                                                        |
+|--------------------|---------------------------------------------------------------|
+| Push to `main`     | Pushes `latest` and `sha-<commit>`                            |
+| Tag `v1.2.3`       | Pushes `1.2.3` and `1.2`                                      |
+| Pull request       | Builds only, nothing is pushed                                |
+
+The images are `ghcr.io/<owner>/<repo>-backend` and `ghcr.io/<owner>/<repo>-frontend` (lowercase).
+To use them instead of building locally, replace `build:` with `image:` in `docker-compose.yml`.
+New GHCR packages are private by default, so `docker login ghcr.io` first or make them public in the package settings.
+
 ## Local development
 
 You need Node 24 and a Postgres database.
