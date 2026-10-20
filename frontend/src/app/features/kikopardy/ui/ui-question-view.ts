@@ -2,7 +2,10 @@ import { Component, input } from '@angular/core';
 import type { CurrentQuestionView } from '../kikopardy.contract';
 import { UiMediaEmbed } from './ui-media-embed';
 
-/** The selected question with its media, and the answer once it is visible. */
+/**
+ * The selected question with its media, and the answer once it is visible.
+ * Players get no question text until the buzzers open, so they see a placeholder meanwhile.
+ */
 @Component({
   selector: 'ui-question-view',
   imports: [UiMediaEmbed],
@@ -14,14 +17,31 @@ import { UiMediaEmbed } from './ui-media-embed';
       <p class="text-sm font-semibold tracking-widest text-gold-300 uppercase">
         {{ current().question.categoryName }} · {{ current().question.value }}
       </p>
-      <h2 class="font-display text-2xl leading-snug text-white sm:text-4xl">
-        {{ current().question.question }}
-      </h2>
-      <ui-media-embed
-        [media]="current().question.questionMedia"
-        [autoplay]="autoplay()"
-        label="Question media"
-      />
+      @if (current().question.question === undefined) {
+        <div class="flex flex-col items-center gap-3 py-8">
+          <span class="text-5xl" aria-hidden="true">🎙️</span>
+          <h2 class="font-display text-2xl leading-snug text-white sm:text-3xl">
+            Listen to the host…
+          </h2>
+          <p class="text-slate-300">The question shows up when the buzzers open.</p>
+        </div>
+      } @else {
+        @if (!current().questionRevealed) {
+          <p
+            class="self-center rounded-full border border-dashed border-slate-500 px-3 py-1 text-xs font-semibold tracking-widest text-slate-300 uppercase"
+          >
+            Only you can see this. Read it out, then open the buzzers.
+          </p>
+        }
+        <h2 class="font-display text-2xl leading-snug text-white sm:text-4xl">
+          {{ current().question.question }}
+        </h2>
+        <ui-media-embed
+          [media]="current().question.questionMedia"
+          [autoplay]="autoplay()"
+          label="Question media"
+        />
+      }
 
       @if (current().question.answer !== undefined) {
         <div

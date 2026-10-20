@@ -7,6 +7,8 @@ import { UiBoardGrid } from '../ui/ui-board-grid';
 import { UiBuzzer } from '../ui/ui-buzzer';
 import { UiGameEnded } from '../ui/ui-game-ended';
 import { UiGameInfoBar } from '../ui/ui-game-info-bar';
+import { UiGuessForm } from '../ui/ui-guess-form';
+import { UiGuessList } from '../ui/ui-guess-list';
 import { UiHostControls, type HostAction } from '../ui/ui-host-controls';
 import { UiQuestionView } from '../ui/ui-question-view';
 import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
@@ -21,6 +23,8 @@ import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
     UiBoardGrid,
     UiQuestionView,
     UiBuzzer,
+    UiGuessForm,
+    UiGuessList,
     UiScoreboard,
     UiHostControls,
     UiGameEnded,
@@ -50,6 +54,16 @@ import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
         <div class="flex flex-col gap-6">
           @if (state.current; as current) {
             <ui-question-view [current]="current" [showHiddenAnswerMedia]="game.isHost()" />
+            @if (game.isGuessQuestion() && (game.isHost() || current.answerRevealed)) {
+              <ui-guess-list
+                [guesses]="current.guesses"
+                [players]="state.players"
+                [value]="current.question.value"
+                [winnerId]="current.guessWinnerId"
+                [canAward]="game.isHost() && !current.guessWinnerId"
+                (awarded)="game.awardGuess($event)"
+              />
+            }
           } @else {
             @if (game.isHost()) {
               <p class="text-slate-300">Pick the next question.</p>
@@ -64,18 +78,30 @@ import { UiScoreboard, type ScoreChange } from '../ui/ui-scoreboard';
         </div>
 
         <aside class="flex flex-col gap-6">
-          @if (!game.isHost() && state.current) {
-            <ui-buzzer
-              [state]="game.buzzerState()"
-              [buzzedName]="game.buzzedPlayer()?.name"
-              (buzzed)="game.buzz()"
-            />
+          @if (!game.isHost() && state.current; as current) {
+            @if (game.isGuessQuestion()) {
+              <ui-guess-form
+                [open]="current.guessingOpen"
+                [revealed]="current.answerRevealed"
+                [submittedGuess]="game.myGuess()"
+                [guessedCount]="current.guessedPlayerIds.length"
+                [playerCount]="state.players.length"
+                (guessed)="game.guess($event)"
+              />
+            } @else {
+              <ui-buzzer
+                [state]="game.buzzerState()"
+                [buzzedName]="game.buzzedPlayer()?.name"
+                (buzzed)="game.buzz()"
+              />
+            }
           }
           @if (game.isHost() && state.current; as current) {
             <ui-host-controls
               [current]="current"
               [buzzedPlayer]="game.buzzedPlayer()"
               [triedNames]="game.triedNames()"
+              [playerCount]="state.players.length"
               (action)="onHostAction($event)"
             />
           }
@@ -122,6 +148,12 @@ export class PageKikopardyGame {
         break;
       case 'lockBuzzers':
         void this.game.setBuzzersOpen(false);
+        break;
+      case 'openGuessing':
+        void this.game.setGuessingOpen(true);
+        break;
+      case 'lockGuessing':
+        void this.game.setGuessingOpen(false);
         break;
       case 'correct':
         void this.game.judge(true);

@@ -4,6 +4,8 @@ import type { CurrentQuestionView, GamePlayer } from '../kikopardy.contract';
 export type HostAction =
   | 'openBuzzers'
   | 'lockBuzzers'
+  | 'openGuessing'
+  | 'lockGuessing'
   | 'correct'
   | 'wrong'
   | 'unlockPlayers'
@@ -18,7 +20,29 @@ export type HostAction =
     <section aria-labelledby="host-controls-heading" class="card flex flex-col gap-4 p-4">
       <h2 id="host-controls-heading" class="text-lg font-bold text-gold-300">Host controls</h2>
 
-      @if (buzzedPlayer(); as player) {
+      @if (current().question.type === 'guess') {
+        @if (!current().answerRevealed) {
+          <p class="text-sm text-slate-300" aria-live="polite">
+            Guessing is
+            <strong class="text-white">{{ current().guessingOpen ? 'open' : 'closed' }}</strong>
+            · {{ current().guessedPlayerIds.length }} of {{ playerCount() }} guessed. Give the
+            points to the best guess below.
+          </p>
+          @if (current().guessingOpen) {
+            <button type="button" class="btn btn-secondary" (click)="action.emit('lockGuessing')">
+              Lock guessing
+            </button>
+          } @else {
+            <button
+              type="button"
+              class="btn btn-primary py-3 text-lg"
+              (click)="action.emit('openGuessing')"
+            >
+              {{ current().questionRevealed ? 'Reopen guessing' : 'Show question & open guessing' }}
+            </button>
+          }
+        }
+      } @else if (buzzedPlayer(); as player) {
         <div class="rounded-xl bg-gold-400/15 p-3 ring-2 ring-gold-400" aria-live="assertive">
           <p class="mb-3 text-center text-lg">
             <strong class="text-gold-300">{{ player.name }}</strong> buzzed. Is the answer correct?
@@ -59,7 +83,7 @@ export type HostAction =
             class="btn btn-primary py-3 text-lg"
             (click)="action.emit('openBuzzers')"
           >
-            Open buzzers
+            {{ current().questionRevealed ? 'Open buzzers' : 'Show question & open buzzers' }}
           </button>
         }
       }
@@ -93,5 +117,6 @@ export class UiHostControls {
   readonly current = input.required<CurrentQuestionView>();
   readonly buzzedPlayer = input<GamePlayer | null>(null);
   readonly triedNames = input<string[]>([]);
+  readonly playerCount = input(0);
   readonly action = output<HostAction>();
 }

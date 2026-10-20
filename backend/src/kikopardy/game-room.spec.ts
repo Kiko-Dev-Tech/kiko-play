@@ -14,6 +14,13 @@ function createRoom(overrides: Partial<GameSnapshot> = {}): GameRoom {
           questions: [
             { id: 'q1', value: 100, question: 'Q1?', answer: 'A1' },
             { id: 'q2', value: 200, question: 'Q2?', answer: 'A2' },
+            {
+              id: 'g1',
+              type: 'guess',
+              value: 300,
+              question: 'How tall is the Eiffel Tower?',
+              answer: '330 m',
+            },
           ],
         },
       ],
@@ -111,6 +118,28 @@ describe('GameRoom', () => {
     expect(room.view(false).current?.question.answer).toBe('A1');
   });
 
+  it('shows the question to players only once the buzzers open', () => {
+    room.selectQuestion('q1');
+    const hidden = room.view(false).current;
+    expect(hidden?.questionRevealed).toBe(false);
+    expect(hidden?.question.question).toBeUndefined();
+    expect(hidden?.question).toMatchObject({
+      value: 100,
+      categoryName: 'Movies',
+    });
+    expect(room.view(true).current?.question.question).toBe('Q1?');
+
+    room.setBuzzersOpen(true);
+    room.setBuzzersOpen(false);
+    expect(room.view(false).current?.question.question).toBe('Q1?');
+  });
+
+  it('shows the question when it is skipped before the buzzers opened', () => {
+    room.selectQuestion('q1');
+    room.skip();
+    expect(room.view(false).current?.question.question).toBe('Q1?');
+  });
+
   it('records the results of a question in the played questions', () => {
     room.selectQuestion('q1');
     room.setBuzzersOpen(true);
@@ -159,5 +188,82 @@ describe('GameRoom', () => {
     expect(room.isFinished).toBe(true);
     expect(() => room.selectQuestion('q1')).toThrow('This game has ended');
     expect(() => room.join('p9', 'Late')).toThrow('This game has ended');
+  });
+  describe('guess questions', () => {
+    beforeEach(() => room.selectQuestion('g1'));
+
+    it('accepts guesses only while guessing is open', () => {
+      expect(() => room.guess('p1', '300 m')).toThrow('Guessing is closed');
+      room.setGuessingOpen(true);
+      room.guess('p1', '300 m');
+      room.guess('p1', ' 320 m ');
+      room.setGuessingOpen(false);
+      expect(() => room.guess('p2', '1 km')).toThrow('Guessing is closed');
+      expect(room.view(true).current?.guesses).toEqual([
+        { playerId: 'p1', text: '320 m' },
+      ]);
+    });
+
+    it('shows the question when guessing opens', () => {
+      expect(room.view(false).current?.question.question).toBeUndefined();
+      room.setGuessingOpen(true);
+      expect(room.view(false).current?.question).toMatchObject({
+        type: 'guess',
+        question: 'How tall is the Eiffel Tower?',
+      });
+    });
+
+    it('lets players see only their own guess until the answer is revealed', () => {
+      room.setGuessingOpen(true);
+      room.guess('p1', '300 m');
+      room.guess('p2', '1 km');
+      const anna = room.view(false, 'p1').current;
+      expect(anna?.guesses).toEqual([{ playerId: 'p1', text: '300 m' }]);
+      expect(anna?.guessedPlayerIds).toEqual(['p1', 'p2']);
+      expect(room.view(false, 'p3').current?.guesses).toEqual([]);
+      expect(room.view(true).current?.guesses).toHaveLength(2);
+
+      room.revealAnswer();
+      expect(room.view(false, 'p3').current?.guesses).toHaveLength(2);
+      expect(room.view(false).current?.guessingOpen).toBe(false);
+    });
+
+    it('withdraws a guess with an empty text', () => {
+      room.setGuessingOpen(true);
+      room.guess('p1', '300 m');
+      room.guess('p1', '   ');
+      expect(room.view(true).current?.guessedPlayerIds).toEqual([]);
+    });
+
+    it('gives the points to one player and closes the question', () => {
+      room.setGuessingOpen(true);
+      room.guess('p1', '300 m');
+      room.guess('p2', '330 m');
+      room.awardGuess('p2');
+
+      expect(scores(room)).toEqual({ Anna: 0, Ben: 300, Cleo: 0 });
+      const current = room.view(false).current;
+      expect(current?.guessWinnerId).toBe('p2');
+      expect(current?.answerRevealed).toBe(true);
+      expect(() => room.awardGuess('p1')).toThrow('already been given');
+      expect(room.snapshot().playedQuestions[0]).toMatchObject({
+        questionId: 'g1',
+        results: [{ playerId: 'p2', correct: true, delta: 300 }],
+        guesses: [
+          { playerId: 'p1', text: '300 m' },
+          { playerId: 'p2', text: '330 m' },
+        ],
+      });
+    });
+
+    it('only awards players who guessed', () => {
+      room.setGuessingOpen(true);
+      expect(() => room.awardGuess('p3')).toThrow('has not guessed');
+    });
+
+    it('does not allow buzzing', () => {
+      expect(() => room.setBuzzersOpen(true)).toThrow(GameError);
+      expect(() => room.buzz('p1')).toThrow(GameError);
+    });
   });
 });

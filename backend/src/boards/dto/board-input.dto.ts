@@ -16,6 +16,7 @@ import type {
   Category,
   Media,
   Question,
+  QuestionType,
 } from '../../kikopardy/kikopardy.contract.js';
 
 export class MediaDto {
@@ -40,6 +41,10 @@ export class QuestionDto implements Question {
   @IsString()
   @IsNotEmpty()
   id: string;
+
+  @IsOptional()
+  @IsIn(['buzzer', 'guess'])
+  type?: QuestionType;
 
   @IsInt()
   value: number;

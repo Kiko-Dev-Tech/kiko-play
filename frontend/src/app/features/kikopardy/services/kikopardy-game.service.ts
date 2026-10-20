@@ -45,6 +45,10 @@ export class KikopardyGameService {
     }
     return current.buzzersOpen ? 'open' : 'waiting';
   });
+  readonly isGuessQuestion = computed(() => this.current()?.question.type === 'guess');
+  readonly myGuess = computed(
+    () => this.current()?.guesses.find((g) => g.playerId === this.player.id)?.text ?? '',
+  );
   readonly triedNames = computed(() => {
     const tried = this.current()?.triedPlayerIds ?? [];
     return (this._state()?.players ?? []).filter((p) => tried.includes(p.id)).map((p) => p.name);
@@ -78,6 +82,11 @@ export class KikopardyGameService {
     return this.send(SocketEvents.buzz);
   }
 
+  /** Submits or changes the own guess. An empty text withdraws it. */
+  guess(text: string) {
+    return this.send(SocketEvents.guess, { text });
+  }
+
   // ---------- Host ----------
 
   selectQuestion(questionId: string) {
@@ -90,6 +99,14 @@ export class KikopardyGameService {
 
   judge(correct: boolean) {
     return this.send(SocketEvents.judge, { correct });
+  }
+
+  setGuessingOpen(open: boolean) {
+    return this.send(open ? SocketEvents.openGuessing : SocketEvents.lockGuessing);
+  }
+
+  awardGuess(playerId: string) {
+    return this.send(SocketEvents.awardGuess, { playerId });
   }
 
   unlockPlayers() {

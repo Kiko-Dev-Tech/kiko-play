@@ -15,6 +15,8 @@ import { GamesService } from './games.service.js';
 import {
   SocketEvents,
   type Ack,
+  type AwardGuessPayload,
+  type GuessPayload,
   type HostPayload,
   type JoinPayload,
   type JudgePayload,
@@ -118,6 +120,22 @@ export class KikopardyGateway
     return this.run(room, false, () => room.buzz(playerId));
   }
 
+  @SubscribeMessage(SocketEvents.guess)
+  async guess(
+    @ConnectedSocket() socket: GameSocket,
+    @MessageBody() payload: GuessPayload,
+  ): Promise<Ack> {
+    const { code, playerId } = socket.data;
+    const room = code ? await this.games.getRoom(code) : undefined;
+    if (!room || !playerId) {
+      return fail('You are not in a game');
+    }
+    if (typeof payload?.text !== 'string') {
+      return fail('Invalid request');
+    }
+    return this.run(room, false, () => room.guess(playerId, payload.text));
+  }
+
   // ---------- Admin ----------
 
   @SubscribeMessage(SocketEvents.host)
@@ -168,6 +186,26 @@ export class KikopardyGateway
   ) {
     return this.admin(socket, true, (room) =>
       room.judge(payload?.correct === true),
+    );
+  }
+
+  @SubscribeMessage(SocketEvents.openGuessing)
+  openGuessing(@ConnectedSocket() socket: GameSocket) {
+    return this.admin(socket, false, (room) => room.setGuessingOpen(true));
+  }
+
+  @SubscribeMessage(SocketEvents.lockGuessing)
+  lockGuessing(@ConnectedSocket() socket: GameSocket) {
+    return this.admin(socket, false, (room) => room.setGuessingOpen(false));
+  }
+
+  @SubscribeMessage(SocketEvents.awardGuess)
+  awardGuess(
+    @ConnectedSocket() socket: GameSocket,
+    @MessageBody() payload: AwardGuessPayload,
+  ) {
+    return this.admin(socket, true, (room) =>
+      room.awardGuess(String(payload?.playerId)),
     );
   }
 
@@ -264,10 +302,13 @@ export class KikopardyGateway
     return { ok: true };
   }
 
+  /** Each player gets their own view, because they may only see their own guess. */
   private broadcast(room: GameRoom): void {
-    this.server
-      .to(playersChannel(room.code))
-      .emit(SocketEvents.state, room.view(false));
+    for (const playerId of room.playerIds()) {
+      this.server
+        .to(playerChannel(room.code, playerId))
+        .emit(SocketEvents.state, room.view(false, playerId));
+    }
     this.server
       .to(adminsChannel(room.code))
       .emit(SocketEvents.state, room.view(true));

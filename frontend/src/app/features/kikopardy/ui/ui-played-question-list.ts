@@ -8,6 +8,7 @@ interface PlayedRow {
   question: string;
   answer: string;
   results: { name: string; correct: boolean; delta: number }[];
+  guesses: { name: string; text: string }[];
 }
 
 /** The questions of a finished game in board order, with who answered right or wrong. */
@@ -47,6 +48,16 @@ interface PlayedRow {
             } @else {
               <p class="mt-2 text-sm text-slate-400">Nobody scored.</p>
             }
+            @if (row.guesses.length) {
+              <p class="mt-2 text-sm text-slate-300">
+                Guesses:
+                @for (guess of row.guesses; track $index; let last = $last) {
+                  <span class="text-white">{{ guess.name }}</span> “{{ guess.text }}”{{
+                    last ? '' : ','
+                  }}
+                }
+              </p>
+            }
           </li>
         }
       </ol>
@@ -73,6 +84,10 @@ export class UiPlayedQuestionList {
             name: names.get(r.playerId) ?? 'Unknown player',
             correct: r.correct,
             delta: r.delta,
+          })),
+          guesses: (played.get(q.id)?.guesses ?? []).map((g) => ({
+            name: names.get(g.playerId) ?? 'Unknown player',
+            text: g.text,
           })),
         })),
     );

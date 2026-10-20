@@ -8,8 +8,16 @@ export type Media =
   | { type: 'youtube'; url: string; start?: number; end?: number }
   | { type: 'image'; url: string };
 
+/**
+ * `buzzer`: players buzz in and answer out loud.
+ * `guess`: every player types a guess and the host gives the points to one of them.
+ */
+export type QuestionType = 'buzzer' | 'guess';
+
 export interface Question {
   id: string;
+  /** Missing on boards saved before guess questions existed, which means `buzzer`. */
+  type?: QuestionType;
   value: number;
   question: string;
   answer: string;
@@ -58,25 +66,47 @@ export interface AnswerResult {
   delta: number;
 }
 
+export interface Guess {
+  playerId: string;
+  text: string;
+}
+
 export interface PlayedQuestion {
   questionId: string;
   results: AnswerResult[];
+  /** All guesses of a guess question. */
+  guesses?: Guess[];
   closedAt: string;
 }
 
-/** A question as players see it. The answer is only included once it has been revealed. */
-export interface QuestionView extends Omit<Question, 'answer' | 'answerMedia'> {
+/**
+ * A question as players see it. The question text and media are only included once the
+ * buzzers (or guessing) have been opened, the answer only once it has been revealed.
+ */
+export interface QuestionView extends Pick<Question, 'id' | 'value'> {
+  type: QuestionType;
   categoryName: string;
+  question?: string;
+  questionMedia?: Media | null;
   answer?: string;
   answerMedia?: Media | null;
 }
 
 export interface CurrentQuestionView {
   question: QuestionView;
+  /** Players see the question from the moment the buzzers open, so the host can read it out first. */
+  questionRevealed: boolean;
   buzzersOpen: boolean;
   buzzedPlayerId: string | null;
   triedPlayerIds: string[];
   answerRevealed: boolean;
+  /** Guess questions: whether players can submit or change their guess. */
+  guessingOpen: boolean;
+  /** Who has submitted a guess. Everyone sees this. */
+  guessedPlayerIds: string[];
+  /** The host sees all guesses, a player only their own until the answer is revealed. */
+  guesses: Guess[];
+  guessWinnerId: string | null;
 }
 
 export interface BoardCellView {
@@ -118,10 +148,14 @@ export const SocketEvents = {
   join: 'game:join',
   host: 'game:host',
   buzz: 'player:buzz',
+  guess: 'player:guess',
   selectQuestion: 'admin:selectQuestion',
   openBuzzers: 'admin:openBuzzers',
   lockBuzzers: 'admin:lockBuzzers',
   judge: 'admin:judge',
+  openGuessing: 'admin:openGuessing',
+  lockGuessing: 'admin:lockGuessing',
+  awardGuess: 'admin:awardGuess',
   unlockPlayers: 'admin:unlockPlayers',
   skip: 'admin:skip',
   revealAnswer: 'admin:revealAnswer',
@@ -150,6 +184,15 @@ export interface SelectQuestionPayload {
 
 export interface JudgePayload {
   correct: boolean;
+}
+
+/** An empty text withdraws the guess. */
+export interface GuessPayload {
+  text: string;
+}
+
+export interface AwardGuessPayload {
+  playerId: string;
 }
 
 export interface SetScorePayload {

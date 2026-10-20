@@ -22,6 +22,13 @@ import { UiMediaEditor } from './ui-media-editor';
           >
             {{ question().question || 'Empty question' }}
           </span>
+          @if (question().type === 'guess') {
+            <span
+              class="rounded bg-stage-700 px-1.5 text-xs font-semibold text-gold-300 uppercase"
+              title="Guess question"
+              >Guess</span
+            >
+          }
           @if (question().questionMedia || question().answerMedia) {
             <span class="text-xs text-slate-300" title="Has media">🎬</span>
           }
@@ -56,6 +63,18 @@ import { UiMediaEditor } from './ui-media-editor';
 
       @if (expanded()) {
         <div class="grid gap-3 border-t border-stage-700 p-3">
+          <label class="label">
+            Type
+            <select
+              class="input mt-1"
+              aria-label="Question type"
+              [value]="question().type ?? 'buzzer'"
+              (change)="patch({ type: $any($event.target).value })"
+            >
+              <option value="buzzer">Buzzer: first to buzz answers out loud</option>
+              <option value="guess">Guess: everyone types a guess, you pick the best</option>
+            </select>
+          </label>
           <label class="label">
             Points
             <input

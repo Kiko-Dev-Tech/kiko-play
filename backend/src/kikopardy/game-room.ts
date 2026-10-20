@@ -4,9 +4,12 @@ import type {
   GamePlayer,
   GameStatus,
   GameView,
+  Guess,
   PlayedQuestion,
   Question,
 } from './kikopardy.contract.js';
+
+const MAX_GUESS_LENGTH = 200;
 
 /** Everything that is saved to the database for a game. */
 export interface GameSnapshot {
@@ -24,8 +27,13 @@ interface CurrentQuestion {
   buzzersOpen: boolean;
   buzzedPlayerId: string | null;
   triedPlayerIds: Set<string>;
+  questionRevealed: boolean;
   answerRevealed: boolean;
   results: PlayedQuestion['results'];
+  guessingOpen: boolean;
+  /** Guesses by player ID, in the order they were first submitted. */
+  guesses: Map<string, string>;
+  guessWinnerId: string | null;
 }
 
 export class GameError extends Error {}
@@ -59,6 +67,10 @@ export class GameRoom {
 
   get isFinished(): boolean {
     return this.status === 'finished';
+  }
+
+  playerIds(): string[] {
+    return [...this.players.keys()];
   }
 
   // ---------- Players ----------
@@ -99,7 +111,7 @@ export class GameRoom {
   buzz(playerId: string): void {
     this.assertRunning();
     const current = this.current;
-    if (!current || !this.players.has(playerId)) {
+    if (!current || !this.players.has(playerId) || isGuess(current)) {
       throw new GameError('There is nothing to buzz for');
     }
     if (!current.buzzersOpen || current.buzzedPlayerId) {
@@ -110,6 +122,24 @@ export class GameRoom {
     }
     current.buzzedPlayerId = playerId;
     current.buzzersOpen = false;
+  }
+
+  /** Submits or changes a guess while guessing is open. An empty text withdraws it. */
+  guess(playerId: string, rawText: string): void {
+    this.assertRunning();
+    const current = this.current;
+    if (!current || !isGuess(current) || !this.players.has(playerId)) {
+      throw new GameError('There is nothing to guess');
+    }
+    if (!current.guessingOpen) {
+      throw new GameError('Guessing is closed');
+    }
+    const text = rawText.trim().slice(0, MAX_GUESS_LENGTH);
+    if (text) {
+      current.guesses.set(playerId, text);
+    } else {
+      current.guesses.delete(playerId);
+    }
   }
 
   // ---------- Admin actions ----------
@@ -125,8 +155,12 @@ export class GameRoom {
           buzzersOpen: false,
           buzzedPlayerId: null,
           triedPlayerIds: new Set(),
+          questionRevealed: false,
           answerRevealed: false,
           results: [],
+          guessingOpen: false,
+          guesses: new Map(),
+          guessWinnerId: null,
         };
         return;
       }
@@ -134,19 +168,29 @@ export class GameRoom {
     throw new GameError('Question not found');
   }
 
+  /** Opening the buzzers also shows the question to the players. It stays visible when they are locked again. */
   setBuzzersOpen(open: boolean): void {
     const current = this.requireCurrent();
+    if (isGuess(current)) {
+      throw new GameError('This is a guess question');
+    }
     if (open && current.buzzedPlayerId) {
       throw new GameError(
         'A player has buzzed already. Judge the answer first.',
       );
     }
     current.buzzersOpen = open;
+    if (open) {
+      current.questionRevealed = true;
+    }
   }
 
   /** Scores the buzzed player. A correct answer closes the question, a wrong one reopens the buzzers for the others. */
   judge(correct: boolean): void {
     const current = this.requireCurrent();
+    if (isGuess(current)) {
+      throw new GameError('This is a guess question');
+    }
     const player = current.buzzedPlayerId
       ? this.players.get(current.buzzedPlayerId)
       : undefined;
@@ -165,6 +209,44 @@ export class GameRoom {
     }
   }
 
+  /** Opening guessing also shows the question to the players, like opening the buzzers. */
+  setGuessingOpen(open: boolean): void {
+    const current = this.requireCurrent();
+    if (!isGuess(current)) {
+      throw new GameError('This is not a guess question');
+    }
+    if (open && current.answerRevealed) {
+      throw new GameError('The answer is already revealed');
+    }
+    current.guessingOpen = open;
+    if (open) {
+      current.questionRevealed = true;
+    }
+  }
+
+  /** Gives the question's points to the player with the best guess and closes the question. */
+  awardGuess(playerId: string): void {
+    const current = this.requireCurrent();
+    if (!isGuess(current)) {
+      throw new GameError('This is not a guess question');
+    }
+    const player = this.players.get(playerId);
+    if (!player || !current.guesses.has(playerId)) {
+      throw new GameError('This player has not guessed');
+    }
+    if (current.guessWinnerId) {
+      throw new GameError('The points have already been given');
+    }
+    player.score += current.question.value;
+    current.results.push({
+      playerId,
+      correct: true,
+      delta: current.question.value,
+    });
+    current.guessWinnerId = playerId;
+    this.closeCurrent();
+  }
+
   /** Lets players who already answered wrong buzz again on the current question. */
   unlockPlayers(): void {
     this.requireCurrent().triedPlayerIds.clear();
@@ -177,13 +259,16 @@ export class GameRoom {
   }
 
   revealAnswer(): void {
-    this.requireCurrent().answerRevealed = true;
+    const current = this.requireCurrent();
+    current.questionRevealed = true;
+    current.answerRevealed = true;
+    current.guessingOpen = false;
   }
 
   backToBoard(): void {
     this.assertRunning();
-    // A question that already cost or earned points counts as played, even if it was never closed.
-    if (this.current?.results.length) {
+    // A question that already cost or earned points, or got guesses, counts as played even if it was never closed.
+    if (this.current?.results.length || this.current?.guesses.size) {
       this.closeCurrent();
     }
     this.current = null;
@@ -224,8 +309,11 @@ export class GameRoom {
 
   // ---------- Views ----------
 
-  /** The state for one client. Players only see the answer once it has been revealed. */
-  view(forAdmin: boolean): GameView {
+  /**
+   * The state for one client. Players only see the answer once it has been revealed,
+   * and only their own guess (`viewerId`) until then.
+   */
+  view(forAdmin: boolean, viewerId?: string): GameView {
     return {
       gameId: this.id,
       code: this.code,
@@ -241,7 +329,9 @@ export class GameRoom {
         })),
       })),
       players: [...this.players.values()].map((p) => ({ ...p })),
-      current: this.current ? this.currentView(this.current, forAdmin) : null,
+      current: this.current
+        ? this.currentView(this.current, forAdmin, viewerId)
+        : null,
     };
   }
 
@@ -261,19 +351,33 @@ export class GameRoom {
   private currentView(
     current: CurrentQuestion,
     forAdmin: boolean,
+    viewerId: string | undefined,
   ): CurrentQuestionView {
-    const { answer, answerMedia, ...question } = current.question;
+    const { id, value, question, questionMedia, answer, answerMedia } =
+      current.question;
+    const showQuestion = forAdmin || current.questionRevealed;
     const showAnswer = forAdmin || current.answerRevealed;
+    const guesses = toGuesses(current.guesses).filter(
+      (g) => showAnswer || g.playerId === viewerId,
+    );
     return {
       question: {
-        ...question,
+        id,
+        type: current.question.type ?? 'buzzer',
+        value,
         categoryName: current.categoryName,
+        ...(showQuestion ? { question, questionMedia } : {}),
         ...(showAnswer ? { answer, answerMedia } : {}),
       },
+      questionRevealed: current.questionRevealed,
       buzzersOpen: current.buzzersOpen,
       buzzedPlayerId: current.buzzedPlayerId,
       triedPlayerIds: [...current.triedPlayerIds],
       answerRevealed: current.answerRevealed,
+      guessingOpen: current.guessingOpen,
+      guessedPlayerIds: [...current.guesses.keys()],
+      guesses,
+      guessWinnerId: current.guessWinnerId,
     };
   }
 
@@ -281,11 +385,14 @@ export class GameRoom {
     const current = this.requireCurrent();
     current.buzzersOpen = false;
     current.buzzedPlayerId = null;
+    current.guessingOpen = false;
+    current.questionRevealed = true;
     current.answerRevealed = true;
     const previous = this.played.get(current.question.id);
     this.played.set(current.question.id, {
       questionId: current.question.id,
       results: [...(previous?.results ?? []), ...current.results],
+      ...(isGuess(current) ? { guesses: toGuesses(current.guesses) } : {}),
       closedAt: new Date().toISOString(),
     });
     current.results = [];
@@ -304,4 +411,12 @@ export class GameRoom {
       throw new GameError('This game has ended');
     }
   }
+}
+
+function isGuess(current: CurrentQuestion): boolean {
+  return current.question.type === 'guess';
+}
+
+function toGuesses(guesses: Map<string, string>): Guess[] {
+  return [...guesses].map(([playerId, text]) => ({ playerId, text }));
 }
